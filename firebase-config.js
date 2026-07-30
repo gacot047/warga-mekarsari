@@ -1,15 +1,13 @@
 // ============================================================
-// ISI KONFIGURASI FIREBASE ANDA DI SINI
-// Cara dapatkan: Firebase Console > Project Settings > General
-// > scroll ke "Your apps" > pilih Web App (</>) > copy config
+// Konfigurasi Firebase - Warga Kavling Mekarsari
 // ============================================================
 const firebaseConfig = {
-  apiKey: "GANTI_DENGAN_API_KEY_ANDA",
-  authDomain: "GANTI.firebaseapp.com",
-  projectId: "GANTI_PROJECT_ID",
-  storageBucket: "GANTI.appspot.com",
-  messagingSenderId: "GANTI",
-  appId: "GANTI"
+  apiKey: "AIzaSyC9NDS92w0EkWpCmCBB9aAvRHN9wxCU6Ag",
+  authDomain: "warga-kavlingmekarsari.firebaseapp.com",
+  projectId: "warga-kavlingmekarsari",
+  storageBucket: "warga-kavlingmekarsari.firebasestorage.app",
+  messagingSenderId: "516750716747",
+  appId: "1:516750716747:web:a307b7000902180b0042ce"
 };
 
 // Domain email dummy untuk login (jangan diubah kecuali paham konsekuensinya)
