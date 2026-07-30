@@ -10,6 +10,7 @@
   :root{
     --bg:#0f172a; --card:#1e293b; --card2:#243146; --accent:#22c55e; --accent2:#3b82f6;
     --text:#e2e8f0; --muted:#94a3b8; --danger:#ef4444; --warn:#f59e0b; --border:#334155;
+    --node-bg:#4472ca; --node-border:#2a5298;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -64,10 +65,24 @@
   .summary-grid .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
   img.bukti-preview{width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;}
   .divider{border-top:1px solid var(--border);margin:14px 0;}
+
+  /* STYLES KHUSUS BAGAN ORGANISASI */
+  .org-container { overflow-x: auto; padding: 10px 0; text-align: center; }
+  .org-chart { display: inline-block; min-width: 600px; padding: 10px; }
+  .org-node {
+    background: var(--node-bg); color: #fff; border: 2px solid var(--node-border);
+    border-radius: 12px; padding: 8px 12px; width: 140px; margin: 0 auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: center;
+  }
+  .org-node .title { font-size: 11px; text-decoration: underline; opacity: 0.9; margin-bottom: 4px; }
+  .org-node .name { font-size: 13px; font-weight: bold; }
   
-  /* Style khusus link WhatsApp pengurus */
-  .btn-wa{display:inline-block;margin-top:6px;background:#25d366;color:#fff;text-decoration:none;
-    padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;}
+  /* Garis Penghubung Org Chart */
+  .org-row { display: flex; justify-content: center; position: relative; margin-bottom: 25px; }
+  .line-v { width: 2px; background: #5c8ae6; height: 20px; margin: 0 auto; }
+  .line-h { height: 2px; background: #5c8ae6; position: absolute; top: -10px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: relative; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; position: relative; }
 </style>
 </head>
 <body>
@@ -125,15 +140,27 @@
 <script src="firebase-config.js"></script>
 <script>
 // ===================== STATE =====================
-let currentUser = null;      // firebase auth user
-let currentProfile = null;   // { noKavling, nama, role, ... }
+let currentUser = null;
+let currentProfile = null;
 let currentTab = 'warga';
-let currentMonth = new Date().toISOString().slice(0,7); // "YYYY-MM"
+let currentMonth = new Date().toISOString().slice(0,7);
 let wargaCache = [];
+
+// Default data pengurus
+let baganData = {
+  ketua: "Adika",
+  penasihat: "H. Ayi",
+  wakil: "Deni",
+  sekretaris: "Angga",
+  bendahara: "Hepi",
+  keamanan: "Agus",
+  sda: "Dahri",
+  kerohanian: "Cucu",
+  perempuan: "Bu Agus"
+};
 
 // ===================== HELPERS =====================
 function rupiah(n){ return "Rp " + (Number(n)||0).toLocaleString('id-ID'); }
-function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
 function openModal(html){ document.getElementById('modalRoot').innerHTML =
   `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
@@ -187,7 +214,7 @@ function switchTab(tab){
   });
   tabs.forEach(t =>
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab));
-  const titles = {warga:'Data Warga', pengurus:'Pengurus RT', pengumuman:'Pengumuman', iuran:'Iuran Bulanan', keuangan:'Laporan Keuangan'};
+  const titles = {warga:'Data Warga', pengurus:'Struktur Pengurus RT', pengumuman:'Pengumuman', iuran:'Iuran Bulanan', keuangan:'Laporan Keuangan'};
   document.getElementById('headerTitle').textContent = titles[tab];
   const fab = document.getElementById('fabBtn');
   fab.classList.toggle('hidden', !(isAdmin() && (tab==='warga'||tab==='pengumuman'||tab==='keuangan')));
@@ -226,7 +253,7 @@ function openWargaForm(id){
   const w = id ? wargaCache.find(x=>x.id===id) : null;
   openModal(`
     <h3>${w ? 'Edit Warga' : 'Tambah Warga'}</h3>
-    <label>No. Kavling (dipakai untuk login, tidak bisa diubah)</label>
+    <label>No. Kavling</label>
     <input id="fNoKavling" value="${w? w.noKavling : ''}" ${w?'disabled':''} placeholder="Contoh: A12">
     <label>Nama Lengkap</label>
     <input id="fNama" value="${w? w.nama:''}">
@@ -243,7 +270,6 @@ function openWargaForm(id){
       <button class="btn ghost" onclick="closeModal()">Batal</button>
       <button class="btn green" onclick="saveWarga('${id||''}')">Simpan</button>
     </div>
-    ${!w ? '<div class="divider"></div><p class="small">⚠️ Menyimpan profil di sini TIDAK membuat akun login. Buat akun login (email/PIN) dulu di Firebase Console → Authentication, dengan email format: <b>[nokavling]@'+AUTH_EMAIL_DOMAIN+'</b></p>' : ''}
   `);
 }
 async function saveWarga(id){
@@ -260,43 +286,133 @@ async function saveWarga(id){
   closeModal(); renderWarga();
 }
 
-// ===================== TAB: PENGURUS =====================
+// ===================== TAB: PENGURUS (BAGAN ORGANISASI) =====================
 async function renderPengurus(){
   const box = document.getElementById('tab-pengurus');
-  box.innerHTML = '<div class="empty">Memuat daftar pengurus...</div>';
+  box.innerHTML = '<div class="empty">Memuat bagan organisasi...</div>';
   
-  if(wargaCache.length === 0){
-    const snap = await db.collection('warga').orderBy('noKavling').get();
-    wargaCache = snap.docs.map(d => ({id:d.id, ...d.data()}));
-  }
-  
-  const pengurusList = wargaCache.filter(w => w.role === 'admin');
-  
-  if(pengurusList.length === 0){
-    box.innerHTML = '<div class="empty">Belum ada data pengurus yang didaftarkan.</div>';
-    return;
-  }
-  
-  box.innerHTML = pengurusList.map(p => {
-    const cleanPhone = (p.notelp || '').replace(/[^0-9]/g, '');
-    const waPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+  // Ambil data bagan dari Firestore
+  try {
+    const doc = await db.collection('pengaturan').doc('bagan_pengurus').get();
+    if(doc.exists) baganData = doc.data();
+  } catch(e) { console.error(e); }
+
+  box.innerHTML = `
+    ${isAdmin() ? `<div style="text-align:right; margin-bottom:10px;"><button class="btn green" onclick="openEditBaganModal()">✏️ Edit Nama Pengurus</button></div>` : ''}
     
-    return `
-      <div class="card">
-        <div class="row">
-          <div>
-            <div style="font-weight:600; font-size:15px;">${p.nama}</div>
-            <div class="small" style="color:var(--accent2); font-weight:600; margin-top:2px;">Pengurus RT</div>
-            <div class="small" style="margin-top:4px;">Kavling ${p.noKavling.toUpperCase()}</div>
-            <div class="small">📞 ${p.notelp || '-'}</div>
+    <div class="card org-container">
+      <div class="org-chart">
+        
+        <!-- LEVEL 1: KETUA & PENASIHAT -->
+        <div class="org-row" style="gap:20px;">
+          <div class="org-node">
+            <div class="title">Ketua</div>
+            <div class="name">${baganData.ketua || '-'}</div>
           </div>
-          <div>
-            ${waPhone ? `<a href="https://wa.me/${waPhone}" target="_blank" class="btn-wa">💬 Hubungi</a>` : ''}
+          <div class="org-node">
+            <div class="title">Penasihat</div>
+            <div class="name">${baganData.penasihat || '-'}</div>
           </div>
         </div>
+
+        <div class="line-v"></div>
+
+        <!-- LEVEL 2: WAKIL KETUA -->
+        <div class="org-row">
+          <div class="org-node">
+            <div class="title">Wakil Ketua</div>
+            <div class="name">${baganData.wakil || '-'}</div>
+          </div>
+        </div>
+
+        <div class="line-v"></div>
+
+        <!-- LEVEL 3: SEKRETARIS & BENDAHARA -->
+        <div class="org-row grid-2" style="max-width:380px; margin:0 auto 25px auto;">
+          <div class="line-h" style="left:25%; right:25%;"></div>
+          <div class="org-node">
+            <div class="title">Sekretaris</div>
+            <div class="name">${baganData.sekretaris || '-'}</div>
+          </div>
+          <div class="org-node">
+            <div class="title">Bendahara</div>
+            <div class="name">${baganData.bendahara || '-'}</div>
+          </div>
+        </div>
+
+        <div class="line-v"></div>
+
+        <!-- LEVEL 4: SEKSI-SEKSI -->
+        <div class="org-row grid-4">
+          <div class="line-h" style="left:12%; right:12%;"></div>
+          <div class="org-node">
+            <div class="title">Sie. Keamanan & Ketertiban</div>
+            <div class="name">${baganData.keamanan || '-'}</div>
+          </div>
+          <div class="org-node">
+            <div class="title">Sie. Pengembangan & SDA</div>
+            <div class="name">${baganData.sda || '-'}</div>
+          </div>
+          <div class="org-node">
+            <div class="title">Sie. Kerohanian</div>
+            <div class="name">${baganData.kerohanian || '-'}</div>
+          </div>
+          <div class="org-node">
+            <div class="title">Koord. Perempuan</div>
+            <div class="name">${baganData.perempuan || '-'}</div>
+          </div>
+        </div>
+
       </div>
-    `;
-  }).join('');
+    </div>
+    <div class="small" style="text-align:center; margin-top:6px;">Geser ke kanan jika bagan terpotong di HP ➔</div>
+  `;
+}
+
+function openEditBaganModal(){
+  openModal(`
+    <h3>Edit Nama Pengurus</h3>
+    <label>Ketua</label>
+    <input id="bKetua" value="${baganData.ketua||''}">
+    <label>Penasihat</label>
+    <input id="bPenasihat" value="${baganData.penasihat||''}">
+    <label>Wakil Ketua</label>
+    <input id="bWakil" value="${baganData.wakil||''}">
+    <label>Sekretaris</label>
+    <input id="bSekretaris" value="${baganData.sekretaris||''}">
+    <label>Bendahara</label>
+    <input id="bBendahara" value="${baganData.bendahara||''}">
+    <label>Sie. Keamanan dan Ketertiban</label>
+    <input id="bKeamanan" value="${baganData.keamanan||''}">
+    <label>Sie. Pengembangan & SDA</label>
+    <input id="bSda" value="${baganData.sda||''}">
+    <label>Sie. Kerohanian</label>
+    <input id="bKerohanian" value="${baganData.kerohanian||''}">
+    <label>Koord. Perempuan</label>
+    <input id="bPerempuan" value="${baganData.perempuan||''}">
+    
+    <div class="row" style="margin-top:12px;">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn green" onclick="saveBagan()">Simpan Bagan</button>
+    </div>
+  `);
+}
+
+async function saveBagan(){
+  baganData = {
+    ketua: document.getElementById('bKetua').value.trim(),
+    penasihat: document.getElementById('bPenasihat').value.trim(),
+    wakil: document.getElementById('bWakil').value.trim(),
+    sekretaris: document.getElementById('bSekretaris').value.trim(),
+    bendahara: document.getElementById('bBendahara').value.trim(),
+    keamanan: document.getElementById('bKeamanan').value.trim(),
+    sda: document.getElementById('bSda').value.trim(),
+    kerohanian: document.getElementById('bKerohanian').value.trim(),
+    perempuan: document.getElementById('bPerempuan').value.trim()
+  };
+  await db.collection('pengaturan').doc('bagan_pengurus').set(baganData);
+  closeModal();
+  renderPengurus();
 }
 
 // ===================== TAB: PENGUMUMAN =====================
@@ -402,27 +518,18 @@ async function renderIuran(){
 function openUploadBukti(noKavling){
   openModal(`
     <h3>Bayar & Upload Bukti</h3>
-    
-    <!-- INFO E-WALLET / QRIS -->
     <div style="background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:12px; text-align:center;">
       <div class="small" style="margin-bottom:8px;">Scan QRIS di bawah via GoPay, DANA, OVO, ShopeePay, atau Mobile Banking:</div>
-      
-      <!-- GANTI link gambar di bawah dengan foto QRIS RT Anda yang sebenarnya -->
       <img src="https://via.placeholder.com/200x200.png?text=QRIS+RT" style="width:180px; height:180px; border-radius:8px; border:1px solid var(--border); background:#fff;">
-      
       <div class="divider" style="margin:10px 0;"></div>
       <div class="small" style="margin-bottom:4px;">Atau Transfer Langsung:</div>
       <div style="font-weight:600; font-size:13px; color:var(--text);">DANA / GoPay: 0812-3456-7890</div>
       <div style="font-weight:600; font-size:13px; color:var(--text);">BCA: 1234567890 (a.n. Bendahara RT)</div>
     </div>
-
-    <!-- FORM UPLOAD -->
     <label>Nominal Iuran (Rp)</label>
     <input id="fNominal" type="number" placeholder="Contoh: 50000">
-    
     <label>Foto Bukti Transfer</label>
     <input id="fBukti" type="file" accept="image/*">
-    
     <div class="row" style="margin-top:8px;">
       <button class="btn ghost" onclick="closeModal()">Batal</button>
       <button class="btn green" onclick="submitBukti('${noKavling}')">Kirim Bukti</button>
