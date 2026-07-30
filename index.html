@@ -270,7 +270,6 @@ async function renderPengurus(){
     wargaCache = snap.docs.map(d => ({id:d.id, ...d.data()}));
   }
   
-  // Filter warga yang rolenya 'admin'
   const pengurusList = wargaCache.filter(w => w.role === 'admin');
   
   if(pengurusList.length === 0){
@@ -381,7 +380,7 @@ async function renderIuran(){
       actionHtml = `<button class="btn green" style="margin-right:6px;" onclick="verifikasiIuran('${rec.id}','lunas')">Verifikasi</button>
                     <button class="btn red" onclick="verifikasiIuran('${rec.id}','belum')">Tolak</button>`;
     } else if(isMine && status !== 'lunas' && status !== 'menunggu'){
-      actionHtml = `<button class="btn ghost" onclick="openUploadBukti('${w.noKavling}')">Upload Bukti</button>`;
+      actionHtml = `<button class="btn ghost" onclick="openUploadBukti('${w.noKavling}')">Bayar / Upload Bukti</button>`;
     } else if(isMine && status === 'menunggu'){
       actionHtml = `<span class="small">Menunggu verifikasi pengurus</span>`;
     }
@@ -399,19 +398,38 @@ async function renderIuran(){
   }).join('');
   list.outerHTML = `<div id="iuranList">${rows || '<div class="empty">Belum ada data warga.</div>'}</div>`;
 }
+
 function openUploadBukti(noKavling){
   openModal(`
-    <h3>Upload Bukti Transfer</h3>
-    <label>Nominal Iuran</label>
+    <h3>Bayar & Upload Bukti</h3>
+    
+    <!-- INFO E-WALLET / QRIS -->
+    <div style="background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:12px; text-align:center;">
+      <div class="small" style="margin-bottom:8px;">Scan QRIS di bawah via GoPay, DANA, OVO, ShopeePay, atau Mobile Banking:</div>
+      
+      <!-- GANTI link gambar di bawah dengan foto QRIS RT Anda yang sebenarnya -->
+      <img src="https://via.placeholder.com/200x200.png?text=QRIS+RT" style="width:180px; height:180px; border-radius:8px; border:1px solid var(--border); background:#fff;">
+      
+      <div class="divider" style="margin:10px 0;"></div>
+      <div class="small" style="margin-bottom:4px;">Atau Transfer Langsung:</div>
+      <div style="font-weight:600; font-size:13px; color:var(--text);">DANA / GoPay: 0812-3456-7890</div>
+      <div style="font-weight:600; font-size:13px; color:var(--text);">BCA: 1234567890 (a.n. Bendahara RT)</div>
+    </div>
+
+    <!-- FORM UPLOAD -->
+    <label>Nominal Iuran (Rp)</label>
     <input id="fNominal" type="number" placeholder="Contoh: 50000">
+    
     <label>Foto Bukti Transfer</label>
     <input id="fBukti" type="file" accept="image/*">
-    <div class="row">
+    
+    <div class="row" style="margin-top:8px;">
       <button class="btn ghost" onclick="closeModal()">Batal</button>
-      <button class="btn green" onclick="submitBukti('${noKavling}')">Kirim</button>
+      <button class="btn green" onclick="submitBukti('${noKavling}')">Kirim Bukti</button>
     </div>
   `);
 }
+
 async function submitBukti(noKavling){
   const nominal = Number(document.getElementById('fNominal').value);
   const file = document.getElementById('fBukti').files[0];
