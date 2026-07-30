@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Warga Kavling Mekarsari RT 005/003</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#243146; --accent:#22c55e; --accent2:#3b82f6;
+    --text:#e2e8f0; --muted:#94a3b8; --danger:#ef4444; --warn:#f59e0b; --border:#334155;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--text);padding-bottom:70px;}
+  .hidden{display:none !important;}
+  header.topbar{position:sticky;top:0;background:var(--bg);padding:16px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;z-index:10;}
+  header.topbar h1{font-size:16px;margin:0;font-weight:600;}
+  header.topbar .sub{font-size:12px;color:var(--muted);}
+  .btn{background:var(--accent2);color:#fff;border:none;padding:10px 16px;border-radius:10px;
+    font-size:14px;font-weight:600;cursor:pointer;}
+  .btn.green{background:var(--accent);}
+  .btn.red{background:var(--danger);}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn:disabled{opacity:.5;}
+  .container{padding:16px;max-width:640px;margin:0 auto;}
+  .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border);}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  input,textarea,select{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);
+    padding:10px 12px;border-radius:10px;font-size:14px;margin-top:6px;margin-bottom:12px;}
+  label{font-size:13px;color:var(--muted);}
+  .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+  .tag.lunas{background:rgba(34,197,94,.15);color:var(--accent);}
+  .tag.menunggu{background:rgba(245,158,11,.15);color:var(--warn);}
+  .tag.belum{background:rgba(148,163,184,.15);color:var(--muted);}
+  .tag.admin{background:rgba(59,130,246,.15);color:var(--accent2);}
+  nav.bottomnav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);
+    display:flex;z-index:20;}
+  nav.bottomnav button{flex:1;background:none;border:none;color:var(--muted);padding:10px 0 8px;
+    font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  nav.bottomnav button.active{color:var(--accent2);}
+  nav.bottomnav .ic{font-size:20px;}
+  #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+  .login-box{width:100%;max-width:360px;text-align:center;}
+  .login-box h1{font-size:20px;margin-bottom:4px;}
+  .login-box p{color:var(--muted);font-size:13px;margin-bottom:24px;}
+  .err{color:var(--danger);font-size:13px;margin-top:-6px;margin-bottom:10px;min-height:16px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;
+    justify-content:center;z-index:50;}
+  .modal{background:var(--card);width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:20px;
+    max-height:85vh;overflow-y:auto;}
+  .modal h3{margin-top:0;}
+  .empty{color:var(--muted);text-align:center;padding:24px 0;font-size:14px;}
+  .fab{position:fixed;bottom:82px;right:16px;background:var(--accent2);color:#fff;border:none;
+    width:52px;height:52px;border-radius:50%;font-size:26px;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:15;cursor:pointer;}
+  .small{font-size:12px;color:var(--muted);}
+  .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .month-nav .m{font-weight:600;font-size:15px;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+  .summary-grid .card{padding:12px;text-align:center;margin:0;}
+  .summary-grid .num{font-size:15px;font-weight:700;}
+  .summary-grid .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+  img.bukti-preview{width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;}
+  .divider{border-top:1px solid var(--border);margin:14px 0;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>🏡 Kavling Mekarsari</h1>
+    <p>RT 005 / RW 003</p>
+    <label>No. Kavling / Rumah</label>
+    <input id="loginKavling" placeholder="Contoh: A12" autocomplete="off">
+    <label>PIN</label>
+    <input id="loginPin" type="password" placeholder="6 digit PIN" inputmode="numeric">
+    <div class="err" id="loginErr"></div>
+    <button class="btn green" style="width:100%" onclick="doLogin()">Masuk</button>
+    <p class="small" style="margin-top:16px;">Belum punya akun? Hubungi pengurus RT untuk didaftarkan.</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div>
+      <h1 id="headerTitle">Warga</h1>
+      <div class="sub" id="headerSub"></div>
+    </div>
+    <button class="btn ghost" onclick="doLogout()">Keluar</button>
+  </header>
+
+  <div class="container">
+    <div id="tab-warga"></div>
+    <div id="tab-pengumuman" class="hidden"></div>
+    <div id="tab-iuran" class="hidden"></div>
+    <div id="tab-keuangan" class="hidden"></div>
+  </div>
+
+  <button class="fab hidden" id="fabBtn" onclick="onFabClick()">+</button>
+
+  <nav class="bottomnav">
+    <button class="active" onclick="switchTab('warga')"><span class="ic">🏠</span>Warga</button>
+    <button onclick="switchTab('pengumuman')"><span class="ic">📢</span>Info</button>
+    <button onclick="switchTab('iuran')"><span class="ic">💳</span>Iuran</button>
+    <button onclick="switchTab('keuangan')"><span class="ic">📊</span>Keuangan</button>
+  </nav>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+// ===================== STATE =====================
+let currentUser = null;      // firebase auth user
+let currentProfile = null;   // { noKavling, nama, role, ... }
+let currentTab = 'warga';
+let currentMonth = new Date().toISOString().slice(0,7); // "YYYY-MM"
+let wargaCache = [];
+
+// ===================== HELPERS =====================
+function rupiah(n){ return "Rp " + (Number(n)||0).toLocaleString('id-ID'); }
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function openModal(html){ document.getElementById('modalRoot').innerHTML =
+  `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+function isAdmin(){ return currentProfile && currentProfile.role === 'admin'; }
+
+// ===================== AUTH =====================
+async function doLogin(){
+  const kav = document.getElementById('loginKavling').value.trim().toLowerCase();
+  const pin = document.getElementById('loginPin').value.trim();
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  if(!kav || !pin){ errEl.textContent = 'Isi No. Kavling dan PIN.'; return; }
+  const email = `${kav}@${AUTH_EMAIL_DOMAIN}`;
+  try{
+    await auth.signInWithEmailAndPassword(email, pin);
+  }catch(e){
+    errEl.textContent = 'No. Kavling atau PIN salah. Hubungi pengurus jika lupa PIN.';
+  }
+}
+function doLogout(){ auth.signOut(); }
+
+auth.onAuthStateChanged(async (user) => {
+  if(user){
+    currentUser = user;
+    const kav = user.email.split('@')[0];
+    const doc = await db.collection('warga').doc(kav).get();
+    if(!doc.exists){
+      alert('Profil warga tidak ditemukan. Hubungi pengurus.');
+      auth.signOut();
+      return;
+    }
+    currentProfile = { id: doc.id, ...doc.data() };
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('headerSub').textContent =
+      `${currentProfile.nama} · ${isAdmin() ? 'Pengurus' : 'Warga'}`;
+    switchTab('warga');
+  } else {
+    currentUser = null; currentProfile = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+  }
+});
+
+// ===================== TAB SWITCHING =====================
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.bottomnav button').forEach((b,i) => {
+    b.classList.toggle('active', ['warga','pengumuman','iuran','keuangan'][i] === tab);
+  });
+  ['warga','pengumuman','iuran','keuangan'].forEach(t =>
+    document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab));
+  const titles = {warga:'Data Warga', pengumuman:'Pengumuman', iuran:'Iuran Bulanan', keuangan:'Laporan Keuangan'};
+  document.getElementById('headerTitle').textContent = titles[tab];
+  const fab = document.getElementById('fabBtn');
+  fab.classList.toggle('hidden', !(isAdmin() && (tab==='warga'||tab==='pengumuman'||tab==='keuangan')));
+  if(tab==='warga') renderWarga();
+  if(tab==='pengumuman') renderPengumuman();
+  if(tab==='iuran') renderIuran();
+  if(tab==='keuangan') renderKeuangan();
+}
+function onFabClick(){
+  if(currentTab==='warga') openWargaForm();
+  if(currentTab==='pengumuman') openPengumumanForm();
+  if(currentTab==='keuangan') openKeuanganForm();
+}
+
+// ===================== TAB: WARGA =====================
+async function renderWarga(){
+  const box = document.getElementById('tab-warga');
+  box.innerHTML = '<div class="empty">Memuat data warga...</div>';
+  const snap = await db.collection('warga').orderBy('noKavling').get();
+  wargaCache = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  if(wargaCache.length===0){ box.innerHTML='<div class="empty">Belum ada data warga.</div>'; return; }
+  box.innerHTML = wargaCache.map(w => `
+    <div class="card">
+      <div class="row">
+        <div>
+          <div style="font-weight:600;">${w.nama} ${w.role==='admin' ? '<span class="tag admin">Pengurus</span>':''}</div>
+          <div class="small">Kavling ${w.noKavling.toUpperCase()} · KK: ${w.kk||'-'}</div>
+          <div class="small">📞 ${w.notelp||'-'}</div>
+        </div>
+        ${isAdmin() ? `<button class="btn ghost" onclick="openWargaForm('${w.id}')">Edit</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+function openWargaForm(id){
+  const w = id ? wargaCache.find(x=>x.id===id) : null;
+  openModal(`
+    <h3>${w ? 'Edit Warga' : 'Tambah Warga'}</h3>
+    <label>No. Kavling (dipakai untuk login, tidak bisa diubah)</label>
+    <input id="fNoKavling" value="${w? w.noKavling : ''}" ${w?'disabled':''} placeholder="Contoh: A12">
+    <label>Nama Lengkap</label>
+    <input id="fNama" value="${w? w.nama:''}">
+    <label>No. KK</label>
+    <input id="fKK" value="${w? (w.kk||''):''}">
+    <label>No. Telp/WA</label>
+    <input id="fTelp" value="${w? (w.notelp||''):''}">
+    <label>Role</label>
+    <select id="fRole">
+      <option value="warga" ${w&&w.role==='warga'?'selected':''}>Warga</option>
+      <option value="admin" ${w&&w.role==='admin'?'selected':''}>Pengurus (Admin)</option>
+    </select>
+    <div class="row">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn green" onclick="saveWarga('${id||''}')">Simpan</button>
+    </div>
+    ${!w ? '<div class="divider"></div><p class="small">⚠️ Menyimpan profil di sini TIDAK membuat akun login. Buat akun login (email/PIN) dulu di Firebase Console → Authentication, dengan email format: <b>[nokavling]@'+AUTH_EMAIL_DOMAIN+'</b></p>' : ''}
+  `);
+}
+async function saveWarga(id){
+  const noKavling = (id || document.getElementById('fNoKavling').value.trim()).toLowerCase();
+  const data = {
+    noKavling,
+    nama: document.getElementById('fNama').value.trim(),
+    kk: document.getElementById('fKK').value.trim(),
+    notelp: document.getElementById('fTelp').value.trim(),
+    role: document.getElementById('fRole').value,
+  };
+  if(!noKavling || !data.nama){ alert('No. Kavling dan Nama wajib diisi.'); return; }
+  await db.collection('warga').doc(noKavling).set(data, {merge:true});
+  closeModal(); renderWarga();
+}
+
+// ===================== TAB: PENGUMUMAN =====================
+async function renderPengumuman(){
+  const box = document.getElementById('tab-pengumuman');
+  box.innerHTML = '<div class="empty">Memuat pengumuman...</div>';
+  const snap = await db.collection('pengumuman').orderBy('tanggal','desc').limit(50).get();
+  if(snap.empty){ box.innerHTML='<div class="empty">Belum ada pengumuman.</div>'; return; }
+  box.innerHTML = snap.docs.map(d => {
+    const p = d.data();
+    const tgl = p.tanggal && p.tanggal.toDate ? p.tanggal.toDate().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
+    return `<div class="card">
+      <div style="font-weight:600;margin-bottom:4px;">${p.judul}</div>
+      <div class="small" style="margin-bottom:8px;">${tgl} · oleh ${p.olehNama||'Pengurus'}</div>
+      <div style="white-space:pre-wrap;font-size:14px;">${p.isi}</div>
+    </div>`;
+  }).join('');
+}
+function openPengumumanForm(){
+  openModal(`
+    <h3>Buat Pengumuman</h3>
+    <label>Judul</label>
+    <input id="fJudul" placeholder="Contoh: Kerja Bakti Minggu Ini">
+    <label>Isi Pengumuman</label>
+    <textarea id="fIsi" rows="5" placeholder="Tulis detail pengumuman..."></textarea>
+    <div class="row">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn green" onclick="savePengumuman()">Kirim</button>
+    </div>
+  `);
+}
+async function savePengumuman(){
+  const judul = document.getElementById('fJudul').value.trim();
+  const isi = document.getElementById('fIsi').value.trim();
+  if(!judul || !isi){ alert('Judul dan isi wajib diisi.'); return; }
+  await db.collection('pengumuman').add({
+    judul, isi,
+    tanggal: firebase.firestore.FieldValue.serverTimestamp(),
+    olehNoKavling: currentProfile.noKavling,
+    olehNama: currentProfile.nama
+  });
+  closeModal(); renderPengumuman();
+}
+
+// ===================== TAB: IURAN =====================
+function shiftMonth(delta){
+  const [y,m] = currentMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  currentMonth = d.toISOString().slice(0,7);
+  renderIuran();
+}
+function monthLabel(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+}
+async function renderIuran(){
+  const box = document.getElementById('tab-iuran');
+  box.innerHTML = `
+    <div class="month-nav">
+      <button class="btn ghost" onclick="shiftMonth(-1)">‹</button>
+      <div class="m">${monthLabel(currentMonth)}</div>
+      <button class="btn ghost" onclick="shiftMonth(1)">›</button>
+    </div>
+    <div id="iuranList" class="empty">Memuat data iuran...</div>`;
+
+  if(wargaCache.length===0){
+    const snap = await db.collection('warga').orderBy('noKavling').get();
+    wargaCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }
+  const iuranSnap = await db.collection('iuran').where('bulan','==',currentMonth).get();
+  const iuranMap = {};
+  iuranSnap.docs.forEach(d => iuranMap[d.data().noKavling] = {id:d.id, ...d.data()});
+
+  const list = document.getElementById('iuranList');
+  const rows = wargaCache.map(w => {
+    const rec = iuranMap[w.noKavling];
+    const status = rec ? rec.status : 'belum';
+    const isMine = currentProfile.noKavling === w.noKavling;
+    let actionHtml = '';
+    if(isAdmin() && status === 'menunggu'){
+      actionHtml = `<button class="btn green" style="margin-right:6px;" onclick="verifikasiIuran('${rec.id}','lunas')">Verifikasi</button>
+                    <button class="btn red" onclick="verifikasiIuran('${rec.id}','belum')">Tolak</button>`;
+    } else if(isMine && status !== 'lunas' && status !== 'menunggu'){
+      actionHtml = `<button class="btn ghost" onclick="openUploadBukti('${w.noKavling}')">Upload Bukti</button>`;
+    } else if(isMine && status === 'menunggu'){
+      actionHtml = `<span class="small">Menunggu verifikasi pengurus</span>`;
+    }
+    return `<div class="card">
+      <div class="row">
+        <div>
+          <div style="font-weight:600;">${w.nama}</div>
+          <div class="small">Kavling ${w.noKavling.toUpperCase()}${rec&&rec.nominal ? ' · '+rupiah(rec.nominal):''}</div>
+        </div>
+        <span class="tag ${status}">${status==='lunas'?'Lunas':status==='menunggu'?'Menunggu':'Belum Bayar'}</span>
+      </div>
+      ${rec && rec.buktiUrl ? `<img class="bukti-preview" src="${rec.buktiUrl}">` : ''}
+      ${actionHtml ? `<div style="margin-top:10px;">${actionHtml}</div>` : ''}
+    </div>`;
+  }).join('');
+  list.outerHTML = `<div id="iuranList">${rows || '<div class="empty">Belum ada data warga.</div>'}</div>`;
+}
+function openUploadBukti(noKavling){
+  openModal(`
+    <h3>Upload Bukti Transfer</h3>
+    <label>Nominal Iuran</label>
+    <input id="fNominal" type="number" placeholder="Contoh: 50000">
+    <label>Foto Bukti Transfer</label>
+    <input id="fBukti" type="file" accept="image/*" capture="environment">
+    <div class="row">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn green" onclick="submitBukti('${noKavling}')">Kirim</button>
+    </div>
+  `);
+}
+async function submitBukti(noKavling){
+  const nominal = Number(document.getElementById('fNominal').value);
+  const file = document.getElementById('fBukti').files[0];
+  if(!nominal || !file){ alert('Isi nominal dan pilih foto bukti transfer.'); return; }
+  const path = `buktiTransfer/${noKavling}/${currentMonth}-${Date.now()}.jpg`;
+  const ref = storage.ref().child(path);
+  await ref.put(file);
+  const url = await ref.getDownloadURL();
+  await db.collection('iuran').add({
+    noKavling, bulan: currentMonth, nominal, status:'menunggu',
+    buktiUrl: url, tanggalUpload: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  closeModal(); renderIuran();
+}
+async function verifikasiIuran(iuranId, status){
+  await db.collection('iuran').doc(iuranId).update({
+    status,
+    tanggalVerifikasi: firebase.firestore.FieldValue.serverTimestamp(),
+    verifikatorNoKavling: currentProfile.noKavling
+  });
+  renderIuran();
+}
+
+// ===================== TAB: KEUANGAN =====================
+async function renderKeuangan(){
+  const box = document.getElementById('tab-keuangan');
+  box.innerHTML = '<div class="empty">Menghitung laporan keuangan...</div>';
+
+  const [iuranLunasSnap, manualSnap] = await Promise.all([
+    db.collection('iuran').where('status','==','lunas').get(),
+    db.collection('keuangan_manual').orderBy('tanggal','desc').get()
+  ]);
+
+  let totalIuran = 0;
+  iuranLunasSnap.docs.forEach(d => totalIuran += Number(d.data().nominal)||0);
+
+  let totalManualMasuk = 0, totalKeluar = 0;
+  const manualList = manualSnap.docs.map(d => {
+    const m = d.data();
+    if(m.jenis === 'masuk') totalManualMasuk += Number(m.jumlah)||0;
+    else totalKeluar += Number(m.jumlah)||0;
+    return {id:d.id, ...m};
+  });
+
+  const totalMasuk = totalIuran + totalManualMasuk;
+  const saldo = totalMasuk - totalKeluar;
+
+  const listHtml = manualList.map(m => {
+    const tgl = m.tanggal && m.tanggal.toDate ? m.tanggal.toDate().toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}) : '';
+    return `<div class="card">
+      <div class="row">
+        <div>
+          <div style="font-weight:600;">${m.keterangan}</div>
+          <div class="small">${tgl}</div>
+        </div>
+        <div style="font-weight:700;color:${m.jenis==='masuk'?'var(--accent)':'var(--danger)'}">
+          ${m.jenis==='masuk'?'+':'-'} ${rupiah(m.jumlah)}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="summary-grid">
+      <div class="card"><div class="num" style="color:var(--accent)">${rupiah(totalMasuk)}</div><div class="lbl">Total Masuk</div></div>
+      <div class="card"><div class="num" style="color:var(--danger)">${rupiah(totalKeluar)}</div><div class="lbl">Total Keluar</div></div>
+      <div class="card"><div class="num">${rupiah(saldo)}</div><div class="lbl">Saldo Kas</div></div>
+    </div>
+    <div class="small" style="margin-bottom:10px;">💡 Total Masuk = Iuran warga (terverifikasi lunas) + pemasukan lain-lain.</div>
+    <h4 style="margin-bottom:8px;">Riwayat Transaksi Manual</h4>
+    ${listHtml || '<div class="empty">Belum ada transaksi manual.</div>'}
+  `;
+}
+function openKeuanganForm(){
+  openModal(`
+    <h3>Catat Transaksi</h3>
+    <label>Jenis</label>
+    <select id="fJenis">
+      <option value="keluar">Pengeluaran</option>
+      <option value="masuk">Pemasukan Lain</option>
+    </select>
+    <label>Jumlah (Rp)</label>
+    <input id="fJumlah" type="number" placeholder="Contoh: 150000">
+    <label>Keterangan</label>
+    <input id="fKeterangan" placeholder="Contoh: Beli lampu jalan">
+    <div class="row">
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+      <button class="btn green" onclick="saveKeuangan()">Simpan</button>
+    </div>
+  `);
+}
+async function saveKeuangan(){
+  const jenis = document.getElementById('fJenis').value;
+  const jumlah = Number(document.getElementById('fJumlah').value);
+  const keterangan = document.getElementById('fKeterangan').value.trim();
+  if(!jumlah || !keterangan){ alert('Jumlah dan keterangan wajib diisi.'); return; }
+  await db.collection('keuangan_manual').add({
+    jenis, jumlah, keterangan,
+    tanggal: firebase.firestore.FieldValue.serverTimestamp(),
+    olehNoKavling: currentProfile.noKavling
+  });
+  closeModal(); renderKeuangan();
+}
+
+// ===================== PWA SERVICE WORKER =====================
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(console.error);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function myKavling() {
+      return request.auth.token.email.split('@')[0];
+    }
+    function myProfile() {
+      return get(/databases/$(database)/documents/warga/$(myKavling())).data;
+    }
+    function isAdmin() {
+      return isSignedIn() && myProfile().role == 'admin';
+    }
+
+    // Data profil warga
+    match /warga/{noKavling} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Pengumuman: semua warga baca, hanya admin yang bisa posting
+    match /pengumuman/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Iuran: semua warga baca. Warga hanya boleh membuat entri "menunggu" untuk
+    // dirinya sendiri. Hanya admin yang boleh mengubah status jadi lunas/tolak.
+    match /iuran/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.noKavling == myKavling()
+                    && request.resource.data.status == 'menunggu';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Transaksi keuangan manual: semua warga baca, hanya admin yang input
+    match /keuangan_manual/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
