@@ -66,23 +66,33 @@
   img.bukti-preview{width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;}
   .divider{border-top:1px solid var(--border);margin:14px 0;}
 
-  /* STYLES KHUSUS BAGAN ORGANISASI */
-  .org-container { overflow-x: auto; padding: 10px 0; text-align: center; }
-  .org-chart { display: inline-block; min-width: 600px; padding: 10px; }
+  /* ================= STYLES KHUSUS BAGAN ORGANISASI (PERBAIKAN) ================= */
+  .org-container { overflow-x: auto; padding: 20px 0; text-align: center; }
+  .org-chart { display: inline-flex; flex-direction: column; align-items: center; min-width: 680px; padding: 10px; }
+  
   .org-node {
     background: var(--node-bg); color: #fff; border: 2px solid var(--node-border);
-    border-radius: 12px; padding: 8px 12px; width: 140px; margin: 0 auto;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: center;
+    border-radius: 12px; padding: 10px 12px; width: 145px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: center; position: relative; z-index: 2;
   }
   .org-node .title { font-size: 11px; text-decoration: underline; opacity: 0.9; margin-bottom: 4px; }
   .org-node .name { font-size: 13px; font-weight: bold; }
+
+  /* Garis Vertikal Lurus */
+  .v-line { width: 2px; height: 24px; background: #5c8ae6; margin: 0 auto; }
   
-  /* Garis Penghubung Org Chart */
-  .org-row { display: flex; justify-content: center; position: relative; margin-bottom: 25px; }
-  .line-v { width: 2px; background: #5c8ae6; height: 20px; margin: 0 auto; }
-  .line-h { height: 2px; background: #5c8ae6; position: absolute; top: -10px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: relative; }
-  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; position: relative; }
+  /* Garis Cabang Horizontal + Vertikal Turun */
+  .branch-wrapper { display: flex; justify-content: space-around; width: 100%; position: relative; }
+  .branch-wrapper::before {
+    content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 2px; background: #5c8ae6;
+  }
+  .branch-4::before { left: 12.5%; right: 12.5%; }
+  
+  .branch-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  
+  /* Garis Kesamping Ketua & Penasihat */
+  .top-level-container { display: flex; align-items: center; justify-content: center; position: relative; }
+  .h-line-penasihat { width: 40px; height: 2px; background: #5c8ae6; }
 </style>
 </head>
 <body>
@@ -286,12 +296,11 @@ async function saveWarga(id){
   closeModal(); renderWarga();
 }
 
-// ===================== TAB: PENGURUS (BAGAN ORGANISASI) =====================
+// ===================== TAB: PENGURUS (BAGAN ORGANISASI - FIXED) =====================
 async function renderPengurus(){
   const box = document.getElementById('tab-pengurus');
   box.innerHTML = '<div class="empty">Memuat bagan organisasi...</div>';
   
-  // Ambil data bagan dari Firestore
   try {
     const doc = await db.collection('pengaturan').doc('bagan_pengurus').get();
     if(doc.exists) baganData = doc.data();
@@ -303,63 +312,82 @@ async function renderPengurus(){
     <div class="card org-container">
       <div class="org-chart">
         
-        <!-- LEVEL 1: KETUA & PENASIHAT -->
-        <div class="org-row" style="gap:20px;">
+        <!-- LEVEL 1: KETUA (PRESISI DI TENGAH) & PENASIHAT -->
+        <div class="top-level-container">
+          <div style="width: 185px;"></div> <!-- Spacer penyeimbang -->
+          
           <div class="org-node">
             <div class="title">Ketua</div>
             <div class="name">${baganData.ketua || '-'}</div>
           </div>
+          
+          <div class="h-line-penasihat"></div>
+          
           <div class="org-node">
             <div class="title">Penasihat</div>
             <div class="name">${baganData.penasihat || '-'}</div>
           </div>
         </div>
 
-        <div class="line-v"></div>
+        <div class="v-line"></div>
 
         <!-- LEVEL 2: WAKIL KETUA -->
-        <div class="org-row">
-          <div class="org-node">
-            <div class="title">Wakil Ketua</div>
-            <div class="name">${baganData.wakil || '-'}</div>
-          </div>
+        <div class="org-node">
+          <div class="title">Wakil Ketua</div>
+          <div class="name">${baganData.wakil || '-'}</div>
         </div>
 
-        <div class="line-v"></div>
+        <div class="v-line"></div>
 
         <!-- LEVEL 3: SEKRETARIS & BENDAHARA -->
-        <div class="org-row grid-2" style="max-width:380px; margin:0 auto 25px auto;">
-          <div class="line-h" style="left:25%; right:25%;"></div>
-          <div class="org-node">
-            <div class="title">Sekretaris</div>
-            <div class="name">${baganData.sekretaris || '-'}</div>
+        <div class="branch-wrapper" style="width: 360px;">
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Sekretaris</div>
+              <div class="name">${baganData.sekretaris || '-'}</div>
+            </div>
           </div>
-          <div class="org-node">
-            <div class="title">Bendahara</div>
-            <div class="name">${baganData.bendahara || '-'}</div>
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Bendahara</div>
+              <div class="name">${baganData.bendahara || '-'}</div>
+            </div>
           </div>
         </div>
 
-        <div class="line-v"></div>
+        <div class="v-line"></div>
 
         <!-- LEVEL 4: SEKSI-SEKSI -->
-        <div class="org-row grid-4">
-          <div class="line-h" style="left:12%; right:12%;"></div>
-          <div class="org-node">
-            <div class="title">Sie. Keamanan & Ketertiban</div>
-            <div class="name">${baganData.keamanan || '-'}</div>
+        <div class="branch-wrapper branch-4" style="width: 660px;">
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Sie. Keamanan & Ketertiban</div>
+              <div class="name">${baganData.keamanan || '-'}</div>
+            </div>
           </div>
-          <div class="org-node">
-            <div class="title">Sie. Pengembangan & SDA</div>
-            <div class="name">${baganData.sda || '-'}</div>
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Sie. Pengembangan & SDA</div>
+              <div class="name">${baganData.sda || '-'}</div>
+            </div>
           </div>
-          <div class="org-node">
-            <div class="title">Sie. Kerohanian</div>
-            <div class="name">${baganData.kerohanian || '-'}</div>
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Sie. Kerohanian</div>
+              <div class="name">${baganData.kerohanian || '-'}</div>
+            </div>
           </div>
-          <div class="org-node">
-            <div class="title">Koord. Perempuan</div>
-            <div class="name">${baganData.perempuan || '-'}</div>
+          <div class="branch-col">
+            <div class="v-line"></div>
+            <div class="org-node">
+              <div class="title">Koord. Perempuan</div>
+              <div class="name">${baganData.perempuan || '-'}</div>
+            </div>
           </div>
         </div>
 
