@@ -64,6 +64,10 @@
   .summary-grid .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
   img.bukti-preview{width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;}
   .divider{border-top:1px solid var(--border);margin:14px 0;}
+  
+  /* Style khusus link WhatsApp pengurus */
+  .btn-wa{display:inline-block;margin-top:6px;background:#25d366;color:#fff;text-decoration:none;
+    padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -95,6 +99,7 @@
 
   <div class="container">
     <div id="tab-warga"></div>
+    <div id="tab-pengurus" class="hidden"></div>
     <div id="tab-pengumuman" class="hidden"></div>
     <div id="tab-iuran" class="hidden"></div>
     <div id="tab-keuangan" class="hidden"></div>
@@ -104,6 +109,7 @@
 
   <nav class="bottomnav">
     <button class="active" onclick="switchTab('warga')"><span class="ic">🏠</span>Warga</button>
+    <button onclick="switchTab('pengurus')"><span class="ic">👔</span>Pengurus</button>
     <button onclick="switchTab('pengumuman')"><span class="ic">📢</span>Info</button>
     <button onclick="switchTab('iuran')"><span class="ic">💳</span>Iuran</button>
     <button onclick="switchTab('keuangan')"><span class="ic">📊</span>Keuangan</button>
@@ -175,16 +181,18 @@ auth.onAuthStateChanged(async (user) => {
 // ===================== TAB SWITCHING =====================
 function switchTab(tab){
   currentTab = tab;
+  const tabs = ['warga','pengurus','pengumuman','iuran','keuangan'];
   document.querySelectorAll('.bottomnav button').forEach((b,i) => {
-    b.classList.toggle('active', ['warga','pengumuman','iuran','keuangan'][i] === tab);
+    b.classList.toggle('active', tabs[i] === tab);
   });
-  ['warga','pengumuman','iuran','keuangan'].forEach(t =>
+  tabs.forEach(t =>
     document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab));
-  const titles = {warga:'Data Warga', pengumuman:'Pengumuman', iuran:'Iuran Bulanan', keuangan:'Laporan Keuangan'};
+  const titles = {warga:'Data Warga', pengurus:'Pengurus RT', pengumuman:'Pengumuman', iuran:'Iuran Bulanan', keuangan:'Laporan Keuangan'};
   document.getElementById('headerTitle').textContent = titles[tab];
   const fab = document.getElementById('fabBtn');
   fab.classList.toggle('hidden', !(isAdmin() && (tab==='warga'||tab==='pengumuman'||tab==='keuangan')));
   if(tab==='warga') renderWarga();
+  if(tab==='pengurus') renderPengurus();
   if(tab==='pengumuman') renderPengumuman();
   if(tab==='iuran') renderIuran();
   if(tab==='keuangan') renderKeuangan();
@@ -250,6 +258,46 @@ async function saveWarga(id){
   if(!noKavling || !data.nama){ alert('No. Kavling dan Nama wajib diisi.'); return; }
   await db.collection('warga').doc(noKavling).set(data, {merge:true});
   closeModal(); renderWarga();
+}
+
+// ===================== TAB: PENGURUS =====================
+async function renderPengurus(){
+  const box = document.getElementById('tab-pengurus');
+  box.innerHTML = '<div class="empty">Memuat daftar pengurus...</div>';
+  
+  if(wargaCache.length === 0){
+    const snap = await db.collection('warga').orderBy('noKavling').get();
+    wargaCache = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  }
+  
+  // Filter warga yang rolenya 'admin'
+  const pengurusList = wargaCache.filter(w => w.role === 'admin');
+  
+  if(pengurusList.length === 0){
+    box.innerHTML = '<div class="empty">Belum ada data pengurus yang didaftarkan.</div>';
+    return;
+  }
+  
+  box.innerHTML = pengurusList.map(p => {
+    const cleanPhone = (p.notelp || '').replace(/[^0-9]/g, '');
+    const waPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+    
+    return `
+      <div class="card">
+        <div class="row">
+          <div>
+            <div style="font-weight:600; font-size:15px;">${p.nama}</div>
+            <div class="small" style="color:var(--accent2); font-weight:600; margin-top:2px;">Pengurus RT</div>
+            <div class="small" style="margin-top:4px;">Kavling ${p.noKavling.toUpperCase()}</div>
+            <div class="small">📞 ${p.notelp || '-'}</div>
+          </div>
+          <div>
+            ${waPhone ? `<a href="https://wa.me/${waPhone}" target="_blank" class="btn-wa">💬 Hubungi</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ===================== TAB: PENGUMUMAN =====================
