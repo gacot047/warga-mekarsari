@@ -66,7 +66,7 @@
   img.bukti-preview{width:100%;border-radius:10px;margin-top:8px;max-height:220px;object-fit:cover;}
   .divider{border-top:1px solid var(--border);margin:14px 0;}
 
-  /* ================= STYLES KHUSUS BAGAN ORGANISASI (PERBAIKAN) ================= */
+  /* ================= STYLES BAGAN ORGANISASI ================= */
   .org-container { overflow-x: auto; padding: 20px 0; text-align: center; }
   .org-chart { display: inline-flex; flex-direction: column; align-items: center; min-width: 680px; padding: 10px; }
   
@@ -78,10 +78,8 @@
   .org-node .title { font-size: 11px; text-decoration: underline; opacity: 0.9; margin-bottom: 4px; }
   .org-node .name { font-size: 13px; font-weight: bold; }
 
-  /* Garis Vertikal Lurus */
   .v-line { width: 2px; height: 24px; background: #5c8ae6; margin: 0 auto; }
   
-  /* Garis Cabang Horizontal + Vertikal Turun */
   .branch-wrapper { display: flex; justify-content: space-around; width: 100%; position: relative; }
   .branch-wrapper::before {
     content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 2px; background: #5c8ae6;
@@ -90,9 +88,38 @@
   
   .branch-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
   
-  /* Garis Kesamping Ketua & Penasihat */
   .top-level-container { display: flex; align-items: center; justify-content: center; position: relative; }
   .h-line-penasihat { width: 40px; height: 2px; background: #5c8ae6; }
+
+  /* ================= STYLES ANNOUNCEMENT ACCORDION (BARU) ================= */
+  .announcement-card {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+  .announcement-card:hover {
+    background: var(--card2);
+  }
+  .announcement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .announcement-body {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .chevron {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.2s ease;
+  }
+  .announcement-card.active .chevron {
+    transform: rotate(180deg);
+  }
 </style>
 </head>
 <body>
@@ -296,7 +323,7 @@ async function saveWarga(id){
   closeModal(); renderWarga();
 }
 
-// ===================== TAB: PENGURUS (BAGAN ORGANISASI - FIXED) =====================
+// ===================== TAB: PENGURUS (BAGAN ORGANISASI) =====================
 async function renderPengurus(){
   const box = document.getElementById('tab-pengurus');
   box.innerHTML = '<div class="empty">Memuat bagan organisasi...</div>';
@@ -312,9 +339,9 @@ async function renderPengurus(){
     <div class="card org-container">
       <div class="org-chart">
         
-        <!-- LEVEL 1: KETUA (PRESISI DI TENGAH) & PENASIHAT -->
+        <!-- LEVEL 1: KETUA & PENASIHAT -->
         <div class="top-level-container">
-          <div style="width: 185px;"></div> <!-- Spacer penyeimbang -->
+          <div style="width: 185px;"></div>
           
           <div class="org-node">
             <div class="title">Ketua</div>
@@ -443,22 +470,36 @@ async function saveBagan(){
   renderPengurus();
 }
 
-// ===================== TAB: PENGUMUMAN =====================
+// ===================== TAB: PENGUMUMAN (RINGKAS & EXTENDABLE) =====================
 async function renderPengumuman(){
   const box = document.getElementById('tab-pengumuman');
   box.innerHTML = '<div class="empty">Memuat pengumuman...</div>';
   const snap = await db.collection('pengumuman').orderBy('tanggal','desc').limit(50).get();
   if(snap.empty){ box.innerHTML='<div class="empty">Belum ada pengumuman.</div>'; return; }
+  
   box.innerHTML = snap.docs.map(d => {
     const p = d.data();
     const tgl = p.tanggal && p.tanggal.toDate ? p.tanggal.toDate().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) : '';
-    return `<div class="card">
-      <div style="font-weight:600;margin-bottom:4px;">${p.judul}</div>
-      <div class="small" style="margin-bottom:8px;">${tgl} · oleh ${p.olehNama||'Pengurus'}</div>
-      <div style="white-space:pre-wrap;font-size:14px;">${p.isi}</div>
+    return `
+    <div class="card announcement-card" onclick="toggleAnnouncement(this)">
+      <div class="announcement-header">
+        <div>
+          <div style="font-weight:600; font-size:15px; color:var(--text);">${p.judul}</div>
+          <div class="small" style="margin-top:2px;">${tgl} · oleh ${p.olehNama||'Pengurus'}</div>
+        </div>
+        <div class="chevron">▼</div>
+      </div>
+      <div class="announcement-body hidden">${p.isi}</div>
     </div>`;
   }).join('');
 }
+
+function toggleAnnouncement(cardEl){
+  const bodyEl = cardEl.querySelector('.announcement-body');
+  cardEl.classList.toggle('active');
+  bodyEl.classList.toggle('hidden');
+}
+
 function openPengumumanForm(){
   openModal(`
     <h3>Buat Pengumuman</h3>
