@@ -170,10 +170,14 @@
 
 <div id="modalRoot"></div>
 
+<!-- FIREBASE SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<!-- XLSX Library untuk Export Excel -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 <script src="firebase-config.js"></script>
 <script>
 // ===================== STATE =====================
@@ -273,8 +277,18 @@ async function renderWarga(){
   box.innerHTML = '<div class="empty">Memuat data warga...</div>';
   const snap = await db.collection('warga').orderBy('noKavling').get();
   wargaCache = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  
   if(wargaCache.length===0){ box.innerHTML='<div class="empty">Belum ada data warga.</div>'; return; }
-  box.innerHTML = wargaCache.map(w => `
+  
+  let headerHtml = '';
+  if(isAdmin()){
+    headerHtml = `
+      <div style="text-align:right; margin-bottom:12px;">
+        <button class="btn green" onclick="downloadWargaExcel()">📥 Download Excel</button>
+      </div>`;
+  }
+
+  const listHtml = wargaCache.map(w => `
     <div class="card">
       <div class="row">
         <div>
@@ -285,7 +299,46 @@ async function renderWarga(){
         ${isAdmin() ? `<button class="btn ghost" onclick="openWargaForm('${w.id}')">Edit</button>` : ''}
       </div>
     </div>`).join('');
+
+  box.innerHTML = headerHtml + listHtml;
 }
+
+// FUNGSI DOWNLOAD EXCEL
+function downloadWargaExcel(){
+  if(!wargaCache || wargaCache.length === 0){
+    alert("Tidak ada data warga untuk diunduh.");
+    return;
+  }
+
+  // Format data untuk Excel
+  const excelData = wargaCache.map((w, index) => ({
+    "No": index + 1,
+    "No Kavling": (w.noKavling || '').toUpperCase(),
+    "Nama Lengkap": w.nama || '',
+    "No KK": w.kk || '-',
+    "No Telp / WA": w.notelp || '-',
+    "Peran / Role": w.role === 'admin' ? 'Pengurus' : 'Warga'
+  }));
+
+  // Buat worksheet & workbook
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Data Warga");
+
+  // Atur lebar kolom otomatis
+  worksheet['!cols'] = [
+    { wch: 5 },  // No
+    { wch: 15 }, // No Kavling
+    { wch: 25 }, // Nama Lengkap
+    { wch: 20 }, // No KK
+    { wch: 18 }, // No Telp
+    { wch: 15 }  // Role
+  ];
+
+  // Simpan file Excel
+  XLSX.writeFile(workbook, `Data_Warga_RT_Mekarsari_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function openWargaForm(id){
   const w = id ? wargaCache.find(x=>x.id===id) : null;
   openModal(`
