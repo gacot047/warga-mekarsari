@@ -91,7 +91,7 @@
   .top-level-container { display: flex; align-items: center; justify-content: center; position: relative; }
   .h-line-penasihat { width: 40px; height: 2px; background: #5c8ae6; }
 
-  /* ================= STYLES ANNOUNCEMENT ACCORDION (BARU) ================= */
+  /* ================= STYLES ANNOUNCEMENT ACCORDION ================= */
   .announcement-card {
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -330,8 +330,10 @@ async function renderPengurus(){
   
   try {
     const doc = await db.collection('pengaturan').doc('bagan_pengurus').get();
-    if(doc.exists) baganData = doc.data();
-  } catch(e) { console.error(e); }
+    if(doc.exists) {
+      baganData = { ...baganData, ...doc.data() };
+    }
+  } catch(e) { console.error("Error get bagan:", e); }
 
   box.innerHTML = `
     ${isAdmin() ? `<div style="text-align:right; margin-bottom:10px;"><button class="btn green" onclick="openEditBaganModal()">✏️ Edit Nama Pengurus</button></div>` : ''}
@@ -448,13 +450,16 @@ function openEditBaganModal(){
     
     <div class="row" style="margin-top:12px;">
       <button class="btn ghost" onclick="closeModal()">Batal</button>
-      <button class="btn green" onclick="saveBagan()">Simpan Bagan</button>
+      <button class="btn green" id="btnSaveBagan" onclick="saveBagan()">Simpan Bagan</button>
     </div>
   `);
 }
 
 async function saveBagan(){
-  baganData = {
+  const btn = document.getElementById('btnSaveBagan');
+  if(btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+
+  const dataInput = {
     ketua: document.getElementById('bKetua').value.trim(),
     penasihat: document.getElementById('bPenasihat').value.trim(),
     wakil: document.getElementById('bWakil').value.trim(),
@@ -465,12 +470,19 @@ async function saveBagan(){
     kerohanian: document.getElementById('bKerohanian').value.trim(),
     perempuan: document.getElementById('bPerempuan').value.trim()
   };
-  await db.collection('pengaturan').doc('bagan_pengurus').set(baganData);
-  closeModal();
-  renderPengurus();
+
+  try {
+    await db.collection('pengaturan').doc('bagan_pengurus').set(dataInput, { merge: true });
+    baganData = { ...baganData, ...dataInput };
+    closeModal();
+    renderPengurus();
+  } catch(e) {
+    alert('Gagal menyimpan data pengurus: ' + e.message);
+    if(btn) { btn.disabled = false; btn.textContent = 'Simpan Bagan'; }
+  }
 }
 
-// ===================== TAB: PENGUMUMAN (RINGKAS & EXTENDABLE) =====================
+// ===================== TAB: PENGUMUMAN =====================
 async function renderPengumuman(){
   const box = document.getElementById('tab-pengumuman');
   box.innerHTML = '<div class="empty">Memuat pengumuman...</div>';
